@@ -58,8 +58,6 @@ def extract_data_from_text(text):
         "Alamat Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"Pembeli Barang Kena Pajak.*?Alamat\s*:\s*(.*?)\s*#", text),
         "NPWP Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"NPWP\s*:\s*([0-9.]+)\s*NIK", text),
         "NITKU Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract_nitku_pembeli(text),
-        "Dasar Pengenaan Pajak": extract(r"Dasar Pengenaan Pajak\s*([0-9.]+,[0-9]+)", text),
-        "Jumlah PPN": extract(r"Jumlah PPN.*?([0-9.]+,[0-9]+)", text),
         "Jumlah PPnBM": extract(r"Jumlah PPnBM.*?([0-9.]+,[0-9]+)", text),
         "Kota": extract(r"\n([A-Z .,]+),\s*\d{1,2}\s+\w+\s+\d{4}", text),
         "Tanggal faktur pajak": extract_tanggal(text),
