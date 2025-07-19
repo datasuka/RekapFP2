@@ -138,7 +138,13 @@ if uploaded_files:
                 
                 # Format ulang angka
                 for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
-                    try:
+        try:
+            tgl_parts = data["Tanggal faktur pajak"].split("/")
+            data["Masa"] = bulan_map.get(tgl_parts[1], "-")
+            data["Tahun"] = tgl_parts[2]
+        except:
+            data["Masa"] = "-"
+            data["Tahun"] = "-"
                         val = merged[kol]
                         if isinstance(val, (int, float)):
                             merged[kol] = f"{val:.2f}".replace(".", ",")
