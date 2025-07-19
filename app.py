@@ -43,7 +43,7 @@ def extract_tabel_rinci(text):
             "No": m.group("no"),
             "Kode Barang/Jasa": m.group("kode"),
             "Nama Barang Kena Pajak / Jasa Kena Pajak": " ".join(m.group("deskripsi").split()),
-            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": m.group("harga").replace(".", "").replace(",", ",")
+            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": re.sub(r"[^0-9]", "", m.group("harga"))
         })
     return result
 
@@ -114,7 +114,7 @@ if uploaded_files:
                     val = merged.get(kol, "")
                     try:
                         if isinstance(val, (int, float)):
-                            merged[kol] = f"{int(val)}".replace(".", ",") if kol == "Harga Jual / Penggantian / Uang Muka / Termin (Rp)" else f"{val:.2f}".replace(".", ",")
+            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": re.sub(r"[^0-9]", "", m.group("harga"))
                         elif isinstance(val, str) and val.replace(",", "").isdigit():
                             merged[kol] = f"{int(val.replace(',', '')):.2f}".replace(".", ",")
                     except:
