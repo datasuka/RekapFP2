@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import fitz  # PyMuPDF
@@ -13,6 +12,11 @@ bulan_map = {
     "Mei": "05", "Juni": "06", "Juli": "07", "Agustus": "08",
     "September": "09", "Oktober": "10", "November": "11", "Desember": "12"
 }
+
+def parse_rupiah(rp_str):
+    clean = re.sub(r"[^\d,]", "", rp_str)
+    clean = clean.replace(",", ".")
+    return int(float(clean))
 
 def extract(pattern, text, flags=re.DOTALL, default="-", postproc=lambda x: x.strip()):
     match = re.search(pattern, text, flags)
@@ -35,17 +39,17 @@ def extract_nitku_pembeli(text):
 def extract_tabel_rinci(text):
     result = []
     pattern = re.compile(
-        r"(?P<no>\d+)\s+(?P<kode>\d{6})\s+(?P<deskripsi>.+?PPnBM.*?=\s*Rp\s*0,00).*?(?P<harga>[0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})",
+        r"(?P<no>\d+)\s+(?P<kode>\d{6})\s+(?P<deskripsi>.+?PPnBM.*?=\s*Rp\s*0,00).*?(Rp\s*[0-9.]+,[0-9]{2})",
         re.DOTALL
     )
     matches = pattern.finditer(text)
     for m in matches:
-        harga_raw = re.sub(r"[^0-9]", "", m.group("harga"))
+        harga = parse_rupiah(m.group(4))
         result.append({
             "No": m.group("no"),
             "Kode Barang/Jasa": m.group("kode"),
             "Nama Barang Kena Pajak / Jasa Kena Pajak": " ".join(m.group("deskripsi").split()),
-            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga_raw
+            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga
         })
     return result
 
@@ -92,9 +96,8 @@ if uploaded_files:
             rinci = extract_tabel_rinci(full_text)
             for row in rinci:
                 merged = row | data
-
                 try:
-                    harga = int(merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"])
+                    harga = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"]
                     kode_faktur = merged.get("Kode Faktur", "")
                     if kode_faktur == "01":
                         dpp = harga
@@ -110,14 +113,6 @@ if uploaded_files:
                 except:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
-
-                # Format angka
-                for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
-                    val = merged[kol]
-                    if isinstance(val, (int, float)):
-                        merged[kol] = str(int(val))
-                    elif isinstance(val, str) and val.replace(",", "").isdigit():
-                        merged[kol] = str(int(val.replace(",", "")))
 
                 final_rows.append(merged)
 
