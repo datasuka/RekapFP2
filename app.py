@@ -91,8 +91,8 @@ if uploaded_files:
             for row in rinci:
                 merged = row | data
                 try:
-                    harga_str = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"].replace(".", "").replace(",", "")
-                    harga = int(harga_str)
+                    harga_str = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"]
+                    harga = float(harga_str.replace(".", "").replace(",", "."))
                     kode_faktur = merged.get("Kode Faktur", "")
                     if kode_faktur == "01":
                         dpp = harga
