@@ -5,7 +5,7 @@ import fitz
 import re
 from io import BytesIO
 
-st.title("Rekap Faktur Pajak ke Excel (Multi File) - Revisi 31")
+st.title("Rekap Faktur Pajak ke Excel (Multi File) - Revisi Fix Harga")
 
 bulan_map = {
     "Januari": "01", "Februari": "02", "Maret": "03", "April": "04",
@@ -39,11 +39,7 @@ def extract_tabel_rinci(text):
     )
     for m in pattern.finditer(text):
         nama_brg = " ".join(m.group(3).split())
-        harga_str = m.group(4).replace(".", "").replace(",", "")
-        try:
-            harga = int(harga_str)
-        except:
-            harga = 0
+        harga = m.group(4).replace(".", "").replace(",", "")  # contoh: "26020000"
         result.append({
             "No": m.group(1),
             "Kode Barang/Jasa": m.group(2),
@@ -93,7 +89,7 @@ if uploaded_files:
             for row in rinci:
                 merged = row | data
                 try:
-                    harga = row["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"]
+                    harga = int(row["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"])
                     kode_faktur = merged.get("Kode Faktur", merged["Kode dan Nomor Seri Faktur Pajak"][:2])
                     if kode_faktur == "01":
                         dpp = harga
@@ -104,16 +100,11 @@ if uploaded_files:
                     else:
                         dpp = round(harga * 11 / 12)
                         ppn = round(dpp * 0.12)
-                    merged["DPP"] = dpp
-                    merged["PPN"] = ppn
+                    merged["DPP"] = f"{dpp:.2f}".replace(".", ",")
+                    merged["PPN"] = f"{ppn:.2f}".replace(".", ",")
                 except:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
-
-                for kol in ["DPP", "PPN"]:
-                    val = merged[kol]
-                    if isinstance(val, (int, float)):
-                        merged[kol] = f"{val:,}".replace(",", ".")
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
