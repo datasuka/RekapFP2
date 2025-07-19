@@ -145,6 +145,8 @@ if uploaded_files:
                         elif isinstance(val, str) and val.replace(",", "").isdigit():
                             merged[kol] = f"{int(val.replace(',', '')):.2f}".replace(".", ",")
         except:
+            data["Masa"] = "-"
+            data["Tahun"] = "-"
                         pass
 
                 final_rows.append(merged)
