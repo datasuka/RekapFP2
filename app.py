@@ -81,7 +81,7 @@ if uploaded_files:
             data = extract_data_from_text(full_text)
             data["Nama asli file"] = filename
             data["Kode Faktur"] = data["Kode dan Nomor Seri Faktur Pajak"][:2]
-            try:
+
                 tgl_parts = data["Tanggal faktur pajak"].split("/")
                 data["Masa"] = bulan_map.get(tgl_parts[1], "-")
                 data["Tahun"] = tgl_parts[2]
@@ -95,7 +95,7 @@ if uploaded_files:
                 
                 
                 # Hitung DPP dan PPN berdasarkan kode faktur
-                try:
+
                     harga_str = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"].replace(".", "").replace(",", "")
                     harga = int(harga_str)
                     kode_faktur = merged.get("Kode Faktur", "")
@@ -110,7 +110,7 @@ if uploaded_files:
                         ppn = round(dpp * 0.12)
                     merged["DPP"] = dpp
                     merged["PPN"] = ppn
-                try:
+
                     for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
                         val = merged[kol]
                         if isinstance(val, (int, float)):
@@ -120,8 +120,6 @@ if uploaded_files:
                 except:
                     pass
 
-
-                try:
                     for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
                         val = merged[kol]
                         if isinstance(val, (int, float)):
@@ -137,6 +135,18 @@ if uploaded_files:
                 except:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
+                
+                # Format ulang angka
+                for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
+                    try:
+                        val = merged[kol]
+                        if isinstance(val, (int, float)):
+                            merged[kol] = f"{val:.2f}".replace(".", ",")
+                        elif isinstance(val, str) and val.replace(",", "").isdigit():
+                            merged[kol] = f"{int(val.replace(',', '')):.2f}".replace(".", ",")
+                    except:
+                        pass
+
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
