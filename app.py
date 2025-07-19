@@ -32,20 +32,31 @@ def extract_nitku_pembeli(text):
                 return match.group(1)
     return "-"
 
+
 def extract_tabel_rinci(text):
-    pattern = r"(\d{1,2})\s+(\d{6})\s+(.*?)\s+Rp\s*([0-9.,]+).*?PPnBM.*?=\s*Rp\s*0,00"
-    matches = re.findall(pattern, text, re.DOTALL)
     result = []
-    for no, kode, uraian, harga in matches:
-        desc_block = re.search(rf"{kode}\s+(.*?PPnBM.*?=\s*Rp\s*0,00)", text, re.DOTALL)
-        uraian_lengkap = desc_block.group(1).replace("\n", " ").strip() if desc_block else uraian.strip()
-        harga_fix = re.sub(r"[^0-9,]", "", harga)
-        result.append({
-            "No": no,
-            "Kode Barang/Jasa": kode,
-            "Nama Barang Kena Pajak / Jasa Kena Pajak": uraian_lengkap,
-            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga_fix
-        })
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        if re.match(r"^\d+\s+\d{6}$", lines[i].strip()):
+            no, kode = lines[i].strip().split()
+            nama_lines = []
+            i += 1
+            while i < len(lines) and not re.match(r"^[0-9]{1,3}(\.[0-9]{3})*,[0-9]{2}$", lines[i]):
+                nama_lines.append(lines[i].strip())
+                i += 1
+            if i < len(lines):
+                harga = lines[i].strip().replace(".", "").replace(",", ",")
+            else:
+                harga = ""
+            nama_full = " ".join(nama_lines)
+            result.append({
+                "No": no,
+                "Kode Barang/Jasa": kode,
+                "Nama Barang Kena Pajak / Jasa Kena Pajak": nama_full,
+                "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga
+            })
+        i += 1
     return result
 
 def extract_data_from_text(text):
@@ -94,6 +105,27 @@ if uploaded_files:
             rinci = extract_tabel_rinci(full_text)
             for row in rinci:
                 merged = row | data
+                
+                
+                # Hitung DPP dan PPN berdasarkan kode faktur
+                try:
+                    harga_str = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"].replace(".", "").replace(",", "")
+                    harga = int(harga_str)
+                    kode_faktur = merged.get("Kode Faktur", "")
+                    if kode_faktur == "01":
+                        dpp = harga
+                        ppn = round(dpp * 0.12)
+                    elif kode_faktur == "05":
+                        dpp = harga
+                        ppn = round(dpp * 11 / 12 * 0.12)
+                    else:
+                        dpp = round(harga * 11 / 12)
+                        ppn = round(dpp * 0.12)
+                    merged["DPP"] = dpp
+                    merged["PPN"] = ppn
+                except:
+                    merged["DPP"] = ""
+                    merged["PPN"] = ""
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
