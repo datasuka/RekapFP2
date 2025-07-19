@@ -85,7 +85,7 @@ if uploaded_files:
             tgl_parts = data["Tanggal faktur pajak"].split("/")
             data["Masa"] = bulan_map.get(tgl_parts[1], "-")
             data["Tahun"] = tgl_parts[2]
-            except:
+        except:
                 data["Masa"] = "-"
                 data["Tahun"] = "-"
 
@@ -117,7 +117,7 @@ if uploaded_files:
                             merged[kol] = f"{val:.2f}".replace(".", ",")
                         elif isinstance(val, str) and val.isdigit():
                             merged[kol] = f"{int(val):.2f}".replace(".", ",")
-                except:
+        except:
                     pass
 
                     for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
@@ -126,13 +126,13 @@ if uploaded_files:
                             merged[kol] = f"{val:.2f}".replace(".", ",")
                         elif isinstance(val, str) and val.isdigit():
                             merged[kol] = f"{int(val):.2f}".replace(".", ",")
-                except:
+        except:
                     pass
 
-            except:
+        except:
                 pass
 
-                except:
+        except:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
                 
@@ -144,7 +144,7 @@ if uploaded_files:
                             merged[kol] = f"{val:.2f}".replace(".", ",")
                         elif isinstance(val, str) and val.replace(",", "").isdigit():
                             merged[kol] = f"{int(val.replace(',', '')):.2f}".replace(".", ",")
-                    except:
+        except:
                         pass
 
                 final_rows.append(merged)
