@@ -82,7 +82,7 @@ if uploaded_files:
             data["Nama asli file"] = filename
             data["Kode Faktur"] = data["Kode dan Nomor Seri Faktur Pajak"][:2]
 
-                tgl_parts = data["Tanggal faktur pajak"].split("/")
+            tgl_parts = data["Tanggal faktur pajak"].split("/")
                 data["Masa"] = bulan_map.get(tgl_parts[1], "-")
                 data["Tahun"] = tgl_parts[2]
             except:
