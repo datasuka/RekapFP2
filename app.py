@@ -1,10 +1,11 @@
+
 import streamlit as st
 import pandas as pd
 import fitz
 import re
 from io import BytesIO
 
-st.title("Rekap Faktur Pajak ke Excel (Multi File) - Revisi 28")
+st.title("Rekap Faktur Pajak ke Excel (Multi File) - Revisi 31")
 
 bulan_map = {
     "Januari": "01", "Februari": "02", "Maret": "03", "April": "04",
@@ -38,7 +39,11 @@ def extract_tabel_rinci(text):
     )
     for m in pattern.finditer(text):
         nama_brg = " ".join(m.group(3).split())
-        harga = re.sub(r"[^0-9]", "", m.group(4))
+        harga_str = m.group(4).replace(".", "").replace(",", "")
+        try:
+            harga = int(harga_str)
+        except:
+            harga = 0
         result.append({
             "No": m.group(1),
             "Kode Barang/Jasa": m.group(2),
@@ -88,7 +93,7 @@ if uploaded_files:
             for row in rinci:
                 merged = row | data
                 try:
-                    harga = int(row["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"])
+                    harga = row["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"]
                     kode_faktur = merged.get("Kode Faktur", merged["Kode dan Nomor Seri Faktur Pajak"][:2])
                     if kode_faktur == "01":
                         dpp = harga
@@ -108,7 +113,7 @@ if uploaded_files:
                 for kol in ["DPP", "PPN"]:
                     val = merged[kol]
                     if isinstance(val, (int, float)):
-                        merged[kol] = f"{val:.2f}".replace(".", ",")
+                        merged[kol] = f"{val:,}".replace(",", ".")
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
