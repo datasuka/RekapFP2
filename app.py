@@ -32,24 +32,22 @@ def extract_nitku_pembeli(text):
                 return match.group(1)
     return "-"
 
-def extract_tabel_barang(text):
-    try:
-        tabel_section = re.findall(r"(\d+\s+\d+\s+.*?PPnBM.*?Rp\s*[0-9.,]+)", text, re.DOTALL)
-        nama_list = []
-        harga_list = []
-        for block in tabel_section:
-            nama = re.search(r"(.*?)\nRp", block, re.DOTALL)
-            harga = re.findall(r"Rp\s*([0-9.,]+)", block)
-            if nama:
-                nama_list.append(nama.group(1).strip().replace("\n", " "))
-            if harga:
-                harga_list.append(harga[-1].strip())
-        return " | ".join(nama_list), " | ".join(harga_list)
-    except:
-        return "-", "-"
+def extract_tabel_rinci(text):
+    blocks = re.findall(r"(\d+)\s+(\d{6})\s+(.*?)\s+Rp\s*([0-9.,]+)", text, re.DOTALL)
+    data = []
+    for no, kode, desc, harga in blocks:
+        desc_block = re.search(rf"{kode}\s+(.*?PPnBM.*?=\s*Rp\s*0,00)", text, re.DOTALL)
+        full_desc = desc_block.group(1).replace("\n", " ") if desc_block else desc
+        harga_fix = re.sub(r"[^0-9,]", "", harga)
+        data.append({
+            "No": no,
+            "Kode Barang/Jasa": kode,
+            "Nama Barang Kena Pajak / Jasa Kena Pajak": full_desc.strip(),
+            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga_fix
+        })
+    return data
 
 def extract_data_from_text(text):
-    nama_barang, harga_barang = extract_tabel_barang(text)
     return {
         "Kode dan Nomor Seri Faktur Pajak": extract(r"Kode dan Nomor Seri Faktur Pajak:\s*(\d+)", text),
         "Nama Pengusaha Kena Pajak": extract(r"Pengusaha Kena Pajak:\s*Nama\s*:\s*(.*?)\s*Alamat", text),
@@ -58,13 +56,7 @@ def extract_data_from_text(text):
         "Nama Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"Pembeli Barang Kena Pajak.*?Nama\s*:\s*(.*?)\s*Alamat", text),
         "Alamat Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"Pembeli Barang Kena Pajak.*?Alamat\s*:\s*(.*?)\s*#", text),
         "NPWP Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"NPWP\s*:\s*([0-9.]+)\s*NIK", text),
-        "NIK Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"NIK\s*:\s*(.*?)\s*Nomor Paspor", text),
-        "Nomor paspor Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak": extract(r"Nomor Paspor\s*:\s*(.*?)\s*Identitas", text),
-        "identitas lain Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"Identitas Lain\s*:\s*(.*?)\s*Email", text),
-        "email Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract(r"Email\s*:\s*(.*?)\s", text),
         "NITKU Pembeli Barang Kena Pajak/Penerima Jasa Kena Pajak:": extract_nitku_pembeli(text),
-        "Nama Barang Kena Pajak / Jasa Kena Pajak": nama_barang,
-        "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga_barang,
         "Dasar Pengenaan Pajak": extract(r"Dasar Pengenaan Pajak\s*([0-9.]+,[0-9]+)", text),
         "Jumlah PPN": extract(r"Jumlah PPN.*?([0-9.]+,[0-9]+)", text),
         "Jumlah PPnBM": extract(r"Jumlah PPnBM.*?([0-9.]+,[0-9]+)", text),
@@ -79,6 +71,7 @@ uploaded_files = st.file_uploader("Upload satu atau beberapa PDF Faktur Pajak", 
 if uploaded_files:
     if st.button("Eksekusi Convert"):
         all_data = []
+        tabel_rinci = []
 
         for uploaded_file in uploaded_files:
             filename = uploaded_file.name
@@ -100,13 +93,18 @@ if uploaded_files:
                 data["Tahun"] = "-"
 
             all_data.append(data)
+            tabel_rinci.extend(extract_tabel_rinci(full_text))
 
         df = pd.DataFrame(all_data)
-        df = df.applymap(lambda x: str(x).replace(".", "").replace(",", ",") if isinstance(x, str) and re.match(r'^\d{1,3}(\.\d{3})*,\d{2}$', x) else x)
+        df_rinci = pd.DataFrame(tabel_rinci)
+
         st.success("Semua file berhasil diekstrak!")
         st.dataframe(df)
+        st.dataframe(df_rinci)
 
         buffer = BytesIO()
-        df.to_excel(buffer, index=False)
+        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Rekap Header")
+            df_rinci.to_excel(writer, index=False, sheet_name="Detil Barang")
         buffer.seek(0)
         st.download_button("Download Rekap Excel", buffer, file_name="rekap_faktur_multi.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
