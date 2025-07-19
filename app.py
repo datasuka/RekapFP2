@@ -110,14 +110,17 @@ if uploaded_files:
                         ppn = round(dpp * 0.12)
                     merged["DPP"] = dpp
                     merged["PPN"] = ppn
-        # Format angka: hilangkan pemisah ribuan, pastikan koma sebagai desimal
-        for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
-            try:
-                val = merged[kol]
-                if isinstance(val, (int, float)):
-                    merged[kol] = f"{val:.2f}".replace(".", ",")
-                elif isinstance(val, str) and val.isdigit():
-                    merged[kol] = f"{int(val):.2f}".replace(".", ",")
+
+                try:
+                    for kol in ["Harga Jual / Penggantian / Uang Muka / Termin (Rp)", "DPP", "PPN"]:
+                        val = merged[kol]
+                        if isinstance(val, (int, float)):
+                            merged[kol] = f"{val:.2f}".replace(".", ",")
+                        elif isinstance(val, str) and val.isdigit():
+                            merged[kol] = f"{int(val):.2f}".replace(".", ",")
+                except:
+                    pass
+
             except:
                 pass
 
