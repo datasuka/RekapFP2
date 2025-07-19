@@ -114,7 +114,7 @@ if uploaded_files:
                     val = merged.get(kol, "")
                     try:
                         if isinstance(val, (int, float)):
-                            merged[kol] = f"{val:.2f}".replace(".", ",")
+                            merged[kol] = f"{int(val)}".replace(".", ",") if kol == "Harga Jual / Penggantian / Uang Muka / Termin (Rp)" else f"{val:.2f}".replace(".", ",")
                         elif isinstance(val, str) and val.replace(",", "").isdigit():
                             merged[kol] = f"{int(val.replace(',', '')):.2f}".replace(".", ",")
                     except:
