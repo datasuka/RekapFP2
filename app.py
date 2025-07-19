@@ -35,30 +35,19 @@ def extract_nitku_pembeli(text):
 
 def extract_tabel_rinci(text):
     result = []
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines):
-        if re.match(r"^\d+\s+\d{6}$", lines[i].strip()):
-            no, kode = lines[i].strip().split()
-            nama_lines = []
-            i += 1
-            while i < len(lines) and not re.match(r"^[0-9]{1,3}(\.[0-9]{3})*,[0-9]{2}$", lines[i]):
-                nama_lines.append(lines[i].strip())
-                i += 1
-            if i < len(lines):
-                harga = lines[i].strip().replace(".", "").replace(",", ",")
-            else:
-                harga = ""
-            nama_full = " ".join(nama_lines)
-            result.append({
-                "No": no,
-                "Kode Barang/Jasa": kode,
-                "Nama Barang Kena Pajak / Jasa Kena Pajak": nama_full,
-                "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga
-            })
-        i += 1
+    pattern = re.compile(
+        r"(?P<no>\d+)\s+(?P<kode>\d{6})\s+(?P<deskripsi>.+?PPnBM.*?=\s*Rp\s*0,00).*?(?P<harga>[0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})",
+        re.DOTALL
+    )
+    matches = pattern.finditer(text)
+    for m in matches:
+        result.append({
+            "No": m.group("no"),
+            "Kode Barang/Jasa": m.group("kode"),
+            "Nama Barang Kena Pajak / Jasa Kena Pajak": " ".join(m.group("deskripsi").split()),
+            "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": m.group("harga").replace(".", "").replace(",", ",")
+        })
     return result
-
 def extract_data_from_text(text):
     return {
         "Kode dan Nomor Seri Faktur Pajak": extract(r"Kode dan Nomor Seri Faktur Pajak:\s*(\d+)", text),
