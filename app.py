@@ -39,7 +39,7 @@ def extract_tabel_rinci(text):
     )
     for m in pattern.finditer(text):
         nama_brg = " ".join(m.group(3).split())
-        harga = m.group(4).replace(".", "").replace(",", "")  # contoh: "26020000"
+        harga = m.group(4).replace(".", "").replace(",", "")  # raw numeric string
         result.append({
             "No": m.group(1),
             "Kode Barang/Jasa": m.group(2),
@@ -100,11 +100,17 @@ if uploaded_files:
                     else:
                         dpp = round(harga * 11 / 12)
                         ppn = round(dpp * 0.12)
-                    merged["DPP"] = f"{dpp:.2f}".replace(".", ",")
-                    merged["PPN"] = f"{ppn:.2f}".replace(".", ",")
+                    merged["DPP"] = dpp
+                    merged["PPN"] = ppn
                 except:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
+
+                for kol in ["DPP", "PPN"]:
+                    val = merged[kol]
+                    if isinstance(val, (int, float)):
+                        merged[kol] = f"{val:.2f}".replace(".", ",")
+
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
