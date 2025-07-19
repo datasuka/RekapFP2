@@ -1,22 +1,17 @@
+
 import streamlit as st
 import pandas as pd
-import fitz  # PyMuPDF
+import fitz
 import re
 from io import BytesIO
 
-st.markdown("**By : Reza Fahlevi Lubis BKP @zavibis**")
-st.title("Rekap Faktur Pajak ke Excel (Multi File)")
+st.title("Rekap Faktur Pajak ke Excel (Multi File) - Revisi 28")
 
 bulan_map = {
     "Januari": "01", "Februari": "02", "Maret": "03", "April": "04",
     "Mei": "05", "Juni": "06", "Juli": "07", "Agustus": "08",
     "September": "09", "Oktober": "10", "November": "11", "Desember": "12"
 }
-
-def parse_rupiah(rp_str):
-    clean = re.sub(r"[^\d,]", "", rp_str)
-    clean = clean.replace(",", ".")
-    return int(float(clean))
 
 def extract(pattern, text, flags=re.DOTALL, default="-", postproc=lambda x: x.strip()):
     match = re.search(pattern, text, flags)
@@ -39,16 +34,16 @@ def extract_nitku_pembeli(text):
 def extract_tabel_rinci(text):
     result = []
     pattern = re.compile(
-        r"(?P<no>\d+)\s+(?P<kode>\d{6})\s+(?P<deskripsi>.+?PPnBM.*?=\s*Rp\s*0,00).*?(Rp\s*[0-9.]+,[0-9]{2})",
+        r"(\d+)\s+(\d{6})\s+((?:.*?)(?:PPnBM.*?)=\s*Rp\s*0,00.*?)\s+([0-9.]+,[0-9]{2})",
         re.DOTALL
     )
-    matches = pattern.finditer(text)
-    for m in matches:
-        harga = parse_rupiah(m.group(4))
+    for m in pattern.finditer(text):
+        nama_brg = " ".join(m.group(3).split())
+        harga = re.sub(r"[^0-9]", "", m.group(4))
         result.append({
-            "No": m.group("no"),
-            "Kode Barang/Jasa": m.group("kode"),
-            "Nama Barang Kena Pajak / Jasa Kena Pajak": " ".join(m.group("deskripsi").split()),
+            "No": m.group(1),
+            "Kode Barang/Jasa": m.group(2),
+            "Nama Barang Kena Pajak / Jasa Kena Pajak": nama_brg,
             "Harga Jual / Penggantian / Uang Muka / Termin (Rp)": harga
         })
     return result
@@ -70,12 +65,11 @@ def extract_data_from_text(text):
         "Penandatangan": extract(r"Ditandatangani secara elektronik\n(.*?)\n", text),
     }
 
-uploaded_files = st.file_uploader("Upload satu atau beberapa PDF Faktur Pajak", type=["pdf"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload PDF Faktur Pajak", type=["pdf"], accept_multiple_files=True)
 
 if uploaded_files:
     if st.button("Eksekusi Convert"):
         final_rows = []
-
         for uploaded_file in uploaded_files:
             filename = uploaded_file.name
             with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
@@ -83,8 +77,6 @@ if uploaded_files:
 
             data = extract_data_from_text(full_text)
             data["Nama asli file"] = filename
-            data["Kode Faktur"] = data["Kode dan Nomor Seri Faktur Pajak"][:2]
-
             try:
                 tgl_parts = data["Tanggal faktur pajak"].split("/")
                 data["Masa"] = bulan_map.get(tgl_parts[1], "-")
@@ -97,8 +89,8 @@ if uploaded_files:
             for row in rinci:
                 merged = row | data
                 try:
-                    harga = merged["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"]
-                    kode_faktur = merged.get("Kode Faktur", "")
+                    harga = int(row["Harga Jual / Penggantian / Uang Muka / Termin (Rp)"])
+                    kode_faktur = merged.get("Kode Faktur", merged["Kode dan Nomor Seri Faktur Pajak"][:2])
                     if kode_faktur == "01":
                         dpp = harga
                         ppn = round(dpp * 0.12)
@@ -114,6 +106,10 @@ if uploaded_files:
                     merged["DPP"] = ""
                     merged["PPN"] = ""
 
+                for kol in ["DPP", "PPN"]:
+                    val = merged[kol]
+                    if isinstance(val, (int, float)):
+                        merged[kol] = f"{val:.2f}".replace(".", ",")
                 final_rows.append(merged)
 
         df = pd.DataFrame(final_rows)
@@ -123,4 +119,4 @@ if uploaded_files:
         buffer = BytesIO()
         df.to_excel(buffer, index=False, engine="openpyxl")
         buffer.seek(0)
-        st.download_button("Download Rekap Excel", buffer, file_name="rekap_faktur_multi.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("Download Rekap Excel", buffer, file_name="rekap_faktur.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
